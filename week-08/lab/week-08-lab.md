@@ -21,6 +21,14 @@ In this lab you will build both into a single **Gadget Wishlist** app:
 
 The whole activity should take about **one hour**.
 
+> This is a lab, not a copy-paste tutorial. You get **goals and hints**, not
+> finished code &mdash; the point is to work it out from what you learned in the
+> notes. Read the hints, try it, and check your work against the **"Success"**
+> note at the end of each task. A finished reference exists in the
+> **"wishlist-complete"** folder; treat it as an answer key to consult *after* a
+> genuine attempt on a task, not a place to copy from. If you copy it, you'll
+> pass the lab and fail the quiz.
+
 ## Getting Started
 
 To begin, we will use the **"wishlist-missing"** example from the sample code
@@ -40,9 +48,14 @@ state is not wired up yet: the "Wishlist" count in the navbar stays at `(0)`,
 the "Add to Wishlist" buttons only log to the console, the "Wishlist" page is
 a placeholder, and "Login" does nothing.
 
+Throughout the code you will find comments marked `// TODO (Context)` and
+`// TODO (Jotai)`, one label per part of the lab. These mark the spots you need
+to complete. Search the project for "TODO" to find them all.
+
 ## File Structure
 
-The project contains the following "components" / "pages" structure:
+Before writing any code, **explore the project** and make sure you understand
+what each file does:
 
 - **components/Layout.js**: The shared layout for the site (the "Gadget
   Wishlist" headline and the navigation links). It is where we will eventually
@@ -77,265 +90,155 @@ The project contains the following "components" / "pages" structure:
 
 ## Part 1 &mdash; Shared state with Context (the current user)
 
-We will start with Context, exactly as it was introduced in the notes: create
-one Context object per value, declare the state in `_app.js`, wrap
-`<Component {...pageProps} />` with the matching `Provider` components, and
+We will build Context exactly as it was introduced in the notes: create the
+Context object(s), declare the state in `_app.js`, wrap
+`<Component {...pageProps} />` with the matching `Provider` component(s), and
 read the values elsewhere with `useContext`.
 
-### Creating the Context in "_app.js"
+Unlike some Context examples, here you will keep the Context objects **directly
+in `_app.js`** (there is no separate `context/` file) and export them so other
+files can import them.
 
-**File: "/pages/_app.js"**
+### Task 1.1 &mdash; Create the Context in "_app.js"
 
-Add the imports:
+**Goal:** make a "current user" value &mdash; and a way to change it &mdash; available
+to every page in the app.
 
-```js
-import { useState, createContext } from "react";
-```
+- **Requirements:**
+  - The app needs one piece of state for the current user, starting out as
+    "nobody is logged in."
+  - Other files must be able to read **both** the user *and* the function that
+    updates it.
+  - Both must be provided to the whole component tree.
+- **Hints:**
+  - This is the same shape as the "count / setCount" Context example from the
+    notes &mdash; but you need to share *two* things (the value **and** its setter),
+    so create **two** separate Context objects.
+  - Declare those Context objects at the **top level** of `_app.js` (module
+    scope, not inside the `App` function) and **export** each one.
+  - Declare the `user` state inside `App` with `useState`. What initial value
+    represents "nobody logged in yet"?
+  - Wrap the existing `<Layout>...</Layout>` with **both** providers. Each
+    provider's `value` is one half of your `useState` pair.
 
-Create and export two Context objects &mdash; one for the current user, and one
-for the function that updates it:
+> **Success:** the app still compiles and runs, and nothing visibly changes yet
+> &mdash; the providers are in place, ready to be read in the next tasks.
 
-```js
-export const UserContext = createContext();
-export const SetUserContext = createContext();
-```
+### Task 1.2 &mdash; Show the logged-in user in the navbar
 
-Declare the `user` state and wrap the app with both providers:
+Open `components/Layout.js` and find the `// TODO (Context)` markers.
 
-```jsx
-export default function App({ Component, pageProps }) {
-  const [user, setUser] = useState(null); // null = nobody is logged in yet
+- **Goal:** when someone is logged in, the navbar shows `Logged in as: <name>`;
+  otherwise it shows the existing "Login" link.
+- **Hints:**
+  - Read a Context value with the `useContext` hook.
+  - You need the *user* value here. Import the matching Context object from the
+    file where you declared it &mdash; remember that was `_app.js`
+    (i.e. `@/pages/_app`).
+  - The user is your "nobody logged in" value when logged out &mdash; use that to
+    decide which of the two things to render (a ternary in your JSX).
 
-  return (
-    <UserContext.Provider value={user}>
-      <SetUserContext.Provider value={setUser}>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
-      </SetUserContext.Provider>
-    </UserContext.Provider>
-  );
-}
-```
+> **Success:** logged out you see "Login"; once Task 1.3 works, you see the
+> user's name instead.
 
-Notice this is the same shape as the "count / setCount" example from the
-notes, just renamed to "user / setUser". We did not need a separate
-`context/UserContext.js` file this time &mdash; the Context objects live directly
-in `_app.js` and are exported so other files can import them.
+### Task 1.3 &mdash; Wire up the login form
 
-### Updating "Layout"
+Open `pages/profile.js` and complete the `// TODO (Context)` markers.
 
-Add the imports near the top of the file:
+- **Goal:** submitting the form logs the user in and sends them to the Home
+  page. When already logged in, the page instead shows who is logged in and
+  offers a **Logout** button.
+- **Hints:**
+  - This time you need **both** Context values &mdash; the user *and* the setter &mdash;
+    so that's **two** `useContext` calls, one per Context object you exported
+    from `_app.js`.
+  - On submit, call the setter with the typed-in name, then redirect. Next.js
+    gives you a router hook for navigation &mdash; which one, and which method sends
+    the user to `/`? (Check how other Next.js pages navigate, or the docs.)
+  - Logging out is just setting the user back to the "nobody logged in" value.
+  - Because the value comes from Context, you should **not** need to pass
+    anything through props for the navbar to react.
 
-```js
-import { useContext } from "react";
-import { UserContext } from "@/pages/_app";
-```
-
-Reference the user inside the component:
-
-```js
-const user = useContext(UserContext);
-```
-
-Then show the user's name when logged in, and a "Login" link otherwise
-(replace the hard-coded `<Link href="/profile">Login</Link>`):
-
-```jsx
-{user ? (
-  <span>Logged in as: {user}</span>
-) : (
-  <Link href="/profile">Login</Link>
-)}
-```
-
-### Updating the "profile" page
-
-Finally, wire up the login form so it sets the user in Context.
-
-**File: "/pages/profile.js"**
-
-```jsx
-import { useState, useContext } from "react";
-import { useRouter } from "next/router";
-import { UserContext, SetUserContext } from "@/pages/_app";
-
-export default function Profile() {
-  const user = useContext(UserContext);
-  const setUser = useContext(SetUserContext);
-  const [name, setName] = useState("");
-  const router = useRouter();
-
-  function handleLogin(e) {
-    e.preventDefault();
-    if (!name) return;
-    setUser(name); // update the Context for the whole app
-    router.push("/");
-  }
-
-  function handleLogout() {
-    setUser(null);
-  }
-
-  if (user) {
-    return (
-      <div>
-        <h2>Profile</h2>
-        <p>Logged in as: {user}</p>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={handleLogin}>
-        <label>
-          Name:{" "}
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-        </label>{" "}
-        <button type="submit">Login</button>
-      </form>
-    </div>
-  );
-}
-```
-
-If we refresh the site now, we can log in from the "/profile" page and the
-navbar should immediately update to show "Logged in as: ..." &mdash; even though
-the change happened on a different page.
+> **Success:** logging in on "/profile" updates the navbar to "Logged in as:
+> ..." *instantly* &mdash; even though the change happened on a different page &mdash;
+> and Logout returns you to the logged-out state.
 
 ---
 
 ## Part 2 &mdash; Application state with Jotai (the Wishlist)
 
-Before we begin, we must install Jotai using the command:
+**Goal:** a shared "wishlist" that any page can read from or add to, with a live
+count in the navbar and a summary page showing a running total.
 
-```
-npm i jotai
-```
+### Task 2.1 &mdash; Install Jotai and create the atom
 
-### Creating the atom
+Jotai is not yet a dependency of the starter. Add it, then create the store.
 
-If we would like to make our "wishlist" (ie: a list of "products" that the
-user wishes to save) available anywhere within the site, we should create an
-**"atom"** to store the values. The wishlist should start out empty:
+- **Requirement:** the app needs a single, shared piece of state that holds a
+  list of products, starting empty.
+- **Hints:**
+  - Install the library the same way you would add any npm dependency (the
+    notes show the exact command).
+  - Create a `store.js` file in the project **root** (next to `package.json`).
+  - Build the atom with the `atom()` function from `jotai`. What starting value
+    represents an *empty* wishlist? Remember it holds a *list*.
+  - Export the atom so other files can import it.
 
-**File: "/my-app/store.js"**
+> **Success:** `store.js` exports one atom (e.g. `wishlistAtom`) and the app
+> still compiles.
 
-```js
-import { atom } from "jotai";
+### Task 2.2 &mdash; Show the live count in the navbar
 
-export const wishlistAtom = atom([]);
-```
+Back in `components/Layout.js`, find the `// TODO (Jotai)` markers.
 
-We create a "store.js" file, import the `atom` function from `'jotai'`, and
-define / export an atom (`wishlistAtom`). The default value is an empty array
-(an empty wishlist).
+- **Goal:** the "Wishlist" link shows the real number of items, e.g.
+  `Wishlist (3)`, instead of the hard-coded `(0)`.
+- **Hints:**
+  - Jotai's hook for reading/writing an atom works "just like `useState`" &mdash;
+    which hook is it, and what do you pass it?
+  - You only need to *read* the list here.
+  - How do you get the number of items in an array?
 
-### Updating "Layout"
+> **Success:** the count matches how many products are in the wishlist (still
+> `0` until Task 2.3 lets you add some).
 
-The first component we will update to use `wishlistAtom` is "Layout". Here we
-will show how many products have been added to the wishlist in parentheses
-next to the "Wishlist" link.
+### Task 2.3 &mdash; Implement "Add to Wishlist"
 
-Add the imports near the top of the file:
+The same `addToWishlist()` stub appears in **two** files:
+`components/ProductCard.js` and `pages/products/[id].js`. Complete both.
 
-```js
-import { useAtom } from "jotai";
-import { wishlistAtom } from "@/store";
-```
+- **Goal:** clicking "Add to Wishlist" adds that product to the shared wishlist,
+  and the navbar count goes up.
+- **Hints:**
+  - Here you need to *read and update* the atom, so you need **both** values the
+    hook returns (compare to `const [count, setCount] = useState(...)`).
+  - The product to add is already available in the component (as a `prop` in
+    `ProductCard`, and from the page data in `[id].js`) &mdash; so `addToWishlist`
+    doesn't need a parameter.
+  - Never mutate state directly. To build a **new** array containing everything
+    already in the wishlist **plus** the new product, use the spread syntax from
+    the notes.
+  - Once it works, delete the leftover `console.log`.
 
-Reference the atom inside the component:
+> **Success:** clicking "Add to Wishlist" on the products list *and* on a
+> product's details page both increase the navbar count.
 
-```js
-const [wishlist] = useAtom(wishlistAtom);
-```
+### Task 2.4 &mdash; Build the Wishlist page
 
-Then replace the hard-coded `(0)` with the live count:
+Open `pages/wishlist.js` (currently a placeholder).
 
-```jsx
-<Link href="/wishlist">
-  Wishlist <span>({wishlist.length})</span>
-</Link>
-```
+- **Goal:** list every product currently in the wishlist, and below the list
+  show a **total price** for all of them.
+- **Hints:**
+  - Read the atom (read-only is fine here).
+  - Render the list by mapping over the array; give each item a `key`.
+  - Each product object has fields including `title` and `price`.
+  - For the total, which array method reduces a list of numbers to a single
+    sum? Money reads best with two decimal places &mdash; there's a `Number`
+    method for that.
 
-We use `useAtom` the same way we use `useState`, only the "default value" is
-the atom `wishlistAtom`. This gives us full read/write access to the atom,
-shared by the rest of the site.
-
-### Updating the "addToWishlist()" functions
-
-The next pieces to update are the `addToWishlist()` functions that exist in
-both **"/components/ProductCard.js"** and **"/pages/products/[id].js"**.
-
-In both files, add the atom and the `useAtom` function:
-
-```js
-import { useAtom } from "jotai";
-import { wishlistAtom } from "@/store";
-```
-
-Reference it in the component:
-
-```js
-const [wishlist, setWishlist] = useAtom(wishlistAtom);
-```
-
-Finally, update the `addToWishlist()` function to add the product to the
-wishlist:
-
-```js
-function addToWishlist() {
-  setWishlist([...wishlist, product]);
-}
-```
-
-Since we are modifying the current list of items, we use **"spread syntax"**
-to include all of the previous products, in addition to the new one.
-
-If we refresh the site now, we should be able to click any "Add to Wishlist"
-button and see the "Wishlist" number increase in the navigation bar.
-
-### Updating the "wishlist" page
-
-The final piece is to show all of the products currently in the wishlist on
-the "/wishlist" page, as well as a **total price**.
-
-**File: "/pages/wishlist.js"**
-
-```jsx
-import { useAtom } from "jotai";
-import { wishlistAtom } from "@/store";
-
-export default function WishlistPage() {
-  const [wishlist] = useAtom(wishlistAtom);
-
-  const totalPrice = wishlist.reduce(
-    (total, product) => total + product.price,
-    0
-  );
-
-  return (
-    <div>
-      <h2>My Wishlist</h2>
-      <ul>
-        {wishlist.map((product, index) => (
-          <li key={index}>
-            <strong>{product.title}</strong> &mdash; ${product.price}
-          </li>
-        ))}
-      </ul>
-      <hr />
-      <strong>Total: ${totalPrice.toFixed(2)}</strong>
-    </div>
-  );
-}
-```
-
-With this complete, we can browse the products, add some to the wishlist, and
-view them (with a running total) on the "/wishlist" page.
+> **Success:** after adding a few products, the "/wishlist" page lists them and
+> shows a correct total price.
 
 ---
 
@@ -349,13 +252,14 @@ state in two different ways:
 | Current user | **Context** | `pages/_app.js`, `components/Layout.js`, `pages/profile.js` |
 | Wishlist list | **Jotai** | `store.js`, `components/Layout.js`, `components/ProductCard.js`, `pages/products/[id].js`, `pages/wishlist.js` |
 
-Notice how much setup Context required just for **one** value: two Context
-objects, two Providers wrapping the app, and a `useContext()` call everywhere
-we needed it. If we had also used Context for the wishlist, we would need a
-*second* pair of Context objects and *two more* providers &mdash; the "provider
-hell" pyramid from the notes. The Jotai atom needed **no provider** and **no
-`createContext`** at all &mdash; any component just imports the atom and calls
-`useAtom`. This is exactly why Jotai tends to scale better as an application
-grows more pieces of shared state.
+**Think about it:** notice how much setup Context required just for **one**
+value &mdash; two Context objects, two Providers wrapping the app, and a
+`useContext()` call everywhere you needed it. If you had *also* used Context for
+the wishlist, you would need a *second* pair of Context objects and *two more*
+providers &mdash; the "provider hell" pyramid from the notes. The Jotai atom
+needed **no provider** and **no `createContext`** at all &mdash; any component just
+imports the atom and calls `useAtom`. When would you reach for each?
 
-A finished reference is available in the **"wishlist-complete"** folder.
+Stuck for more than a few minutes on a single task? Compare just that one file
+against the **"wishlist-complete"** folder, understand *why* it works, then come
+back and finish the rest on your own.
